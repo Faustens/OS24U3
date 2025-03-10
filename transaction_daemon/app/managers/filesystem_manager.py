@@ -67,14 +67,15 @@ class FilesystemManager:
     # Wille create a filesystem and folder structure with the given names, even
     # when path = "/tank/file.txt" ('file.txt' will be a folder!)
     def make_fs(self,path):
-        fs_name = os.path.dirname(path).strip(os.sep)
+        fs_name = path.strip(os.sep)
+        print("fs_name: {fs_name}")
         if fs_name in self._filesystems: return 0
         if not any(top_level_fs in fs_name for top_level_fs in self._top_level_fs): 
             raise ex.TopLevelFsNotFoundException
         subprocess.run(["sudo","zfs","create",fs_name])
         print("filesystem created.")
         self._filesystems.append(fs_name)
-        return fs_name
+        return 0
     # Method: destroy_fs -----------------------------------------------------
     # Takes a path and destroys the corresponding filesystem, if it exists
     # [WARNING] All files will be lost, use with caution!
@@ -107,9 +108,10 @@ class FilesystemManager:
         return copy_path
     # TODO
     def create_file(self,path):
-        dirname, _ = os.path.split()
-        if not os.path.exists(dirname): raise ex.PathNotFoundException
-        subprocess.run["touch", path]
+        dirname, _ = os.path.split(path)
+        fs_name = self.get_fs(dirname)
+        if not fs_name in self._filesystems: raise PathNotFoundException
+        subprocess.run(["sudo", "touch", path])
 
     def delete_file(self,path):
         if not os.path.exists(path): raise ex.PathNotFoundException

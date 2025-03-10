@@ -61,3 +61,37 @@ def commit_file():
 def close_file():
     # TODO
     pass
+
+@api_bp.route("/make_file", methods=["POST"])
+def make_file():
+    data = request.json
+    try:
+        uuid = data["uuid"]
+        path = data["path"]
+        _tm.create_file(uuid,path)
+        return jsonify({"answer":"success"}),200
+    except KeyError:
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
+    except ex.UserNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+
+def delete_file():
+    # TODO
+    pass
+
+@api_bp.route("/make_directory", methods=["POST"])
+def make_directory():
+    data = request.json
+    try:
+        uuid = data["uuid"]
+        path = data["path"]
+        _tm.create_directory(uuid,path)
+        return jsonify({"answer":"success"}),200
+    except KeyError:
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
+    except ex.UserNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400

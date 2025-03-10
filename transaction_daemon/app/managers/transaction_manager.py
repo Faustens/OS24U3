@@ -84,8 +84,12 @@ class TransactionManager:
         del self._transactions[tid]
     
     # File creations can never cause conflicts only be affected by them
-    def create_file(self,tid):
-        pass
+    # TODO Proper implementation with conflict management
+    def create_file(self,uuid,path):
+        if uuid not in self._users: raise ex.UserNotFoundException
+        self._fm.create_file(path)
+        return 0
+
     # File deletions can cause conflicts and are handled like normal commits
     def delete_file(self,tid):
         pass
