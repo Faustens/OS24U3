@@ -19,6 +19,7 @@ def deregister():
     data = request.json
     try:
         _tm.deregister_user(data["uuid"])
+        return jsonify({"answer":"success"}), 200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code": "400"}), 400
     pass
@@ -48,7 +49,7 @@ def commit_file():
     try:
         tid = data["tid"]
         _tm.commit_file(tid)
-        return "", 200
+        return jsonify({"answer":"success"}), 200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
     except ex.TransactionInvalidException:

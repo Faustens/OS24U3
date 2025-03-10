@@ -10,3 +10,5 @@ class TransactionInvalidException(Exception):
     pass
 class ZfsError(Exception):
     pass
+class FilesystemNotFoundException(Exception):
+    pass
