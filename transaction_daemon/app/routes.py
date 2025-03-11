@@ -57,10 +57,21 @@ def commit_file():
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
     
-@api_bp.route("/close_file", methods=["POST"])
+@api_bp.route("/close_file", methods=["DELETE"])
 def close_file():
-    # TODO
-    pass
+    data = request.json
+    try:
+        tid = data["tid"]
+        _tm.close_file(tid)
+        return jsonify({"answer":"success"}),200
+    except KeyError:
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
+    except ex.UserNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
 @api_bp.route("/make_file", methods=["POST"])
 def make_file():
@@ -76,10 +87,27 @@ def make_file():
         return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
     except ex.UserNotFoundException:
         return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
+@api_bp.route("/delete_file", methods=["POST"])
 def delete_file():
-    # TODO
-    pass
+    data = request.json
+    try:
+        uuid = data["uuid"]
+        path = data["path"]
+        _tm.delete_file(uuid,path)
+        return jsonify({"answer":"success"}),200
+    except KeyError:
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+    except FileNotFoundError:
+        return jsonify({ "error": "Invalid Request", "message": "File not found"}), 400
+    except ex.UserNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+    except ex.NotAFileException:
+        return jsonify({ "error": "Invalid Request", "message": "Path is not a file"}), 400   
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
 @api_bp.route("/make_directory", methods=["POST"])
 def make_directory():
@@ -95,3 +123,22 @@ def make_directory():
         return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
     except ex.UserNotFoundException:
         return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
+
+@api_bp.route("/delete_directory", methods=["DELETE"])
+def delete_directory():
+    data = request.json
+    try:
+        uuid = data["uuid"]
+        path = data["path"]
+        _tm.delete_directory(uuid,path)
+        return jsonify({"answer":"success"}),200
+    except KeyError:
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
+    except ex.UserNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+    except Exception as e:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500

@@ -2,6 +2,7 @@ from . import filesystem_manager
 import time
 from ..utils import exceptions as ex
 from ..utils import logging
+import os
 
 class _ConflictNode:
     def __init__(self,id,type,timestamp,snapshot,file):
@@ -25,7 +26,8 @@ class ConflictManager:
     # Inserting a new transaction can not lead to any conflict
     def initiate_start(self,id,path):
         timestamp = time.time()
-        snapshot = self._fs.create_snapshot(path,id)
+        dirname,_ = os.path.split(path)
+        snapshot = self._fs.create_snapshot(dirname,id)
         node = _ConflictNode(
             id,
             "start",
@@ -134,6 +136,12 @@ class ConflictManager:
 
         del self._start_nodes[id]
         return 0
+
+    def remove_from_management(self,fs_name):
+        if fs_name not in self._headers: raise ex.FilesystemNotFoundException
+        if self._headers[fs_name] is not None: raise ex.FilesystemInUseException
+        del self._headers[fs_name]
+        return 0
     # Method: remove_node -----------------------------------------------------
     # Internal method
     # [A] node actually exists
@@ -152,6 +160,7 @@ class ConflictManager:
             node.succ.pred = node.pred
             node.succ = None
             node.pred = None
+        self._fs.destroy_snapshot(node.snapshot)
 
     def get_start_node(self,id):
         try:

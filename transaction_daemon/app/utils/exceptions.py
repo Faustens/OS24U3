@@ -12,3 +12,7 @@ class ZfsError(Exception):
     pass
 class FilesystemNotFoundException(Exception):
     pass
+class FilesystemExistsException(Exception):
+    pass
+class FilesystemInUseException(Exception):
+    pass

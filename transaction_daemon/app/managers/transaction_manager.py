@@ -52,49 +52,78 @@ class TransactionManager:
         }
         self._transactions[tid] = transaction
         # Insert  relevant data into conflict management structure
+        print("Before conflict start init")
         self._cm.initiate_start(tid,origin_path)
         self.logger.log(f"[TM][INFO] new transaction '{tid}' opened")
+        print("open_file successfuly run")
         return tid, copy_path
     
     def commit_file(self,tid):
         try:
             transaction = self._transactions[tid]
-            print("before commit")
             self._cm.initiate_commit(tid)
-            print("before overwrite")
             self._fm.overwrite_file(transaction["origin_path"], transaction["copy_path"])
-            print("before logging")
             self.logger.log(f"[TM][INFO] transaction '{tid}' successfully committed")
         except KeyError:
             raise ex.TransactionInvalidException
         finally:
-            print("Before file removal")
-            print("before transaction status change")
             transaction["status"] = "closed"
-            print("before transaction removal")
             del self._transactions[tid]
-            print("done")
             # TODO Remove snapshot
 
     def close_file(self,tid):
         transaction = self._transactions[tid]
         self._cm.cancel(tid)
-        self._fm.delete_file(transaction["copy_path"])
+        print(f"Before copy deletion: {transaction['copy_path']}")
+        self._fm.delete_file_copy(transaction["copy_path"])
         self.logger.log(f"[TM][INFO] transaction '{tid}' successfully cancelled")
         del self._transactions[tid]
     
     # File creations can never cause conflicts only be affected by them
-    # TODO Proper implementation with conflict management
     def create_file(self,uuid,path):
         if uuid not in self._users: raise ex.UserNotFoundException
         self._fm.create_file(path)
         return 0
 
     # File deletions can cause conflicts and are handled like normal commits
-    def delete_file(self,tid):
-        pass
-
+    def delete_file(self,uuid,path):
+        if not os.path.exists(path): raise FileNotFoundError
+        if not os.path.isfile(path): raise ex.NotAFileException
+        if uuid not in self._users: raise ex.UserNotFoundException
+        # Generate TID
+        utn = next(self._users[uuid]["utn_counter"])
+        tid = f'{uuid}_{utn}'
+        # Create copy of file in tmp directory
+        # Create transaction
+        transaction = {
+            "type": "delete_file",
+            "origin_path": path,
+            "copy_path": None,
+            "status": "open"
+        }
+        self._transactions[tid] = transaction
+        # Insert  relevant data into conflict management structure
+        self._cm.initiate_start(tid,path)
+        self.logger.log(f"[TM][INFO] new transaction '{tid}' opened")
+        self._fm.delete_file(path)
+        self._cm.initiate_commit(tid)
+        return tid
+    # Method: create_directory ------------------------------------------------
+    # Creates a directory by creating a filesystem
     def create_directory(self,uuid,path):
         if uuid not in self._users: raise ex.UserNotFoundException
-        self._fm.make_fs(path)
+        try:
+            self._fm.make_fs(path)
+        except ex.FilesystemExistsException:
+            pass
         return 0
+    # Method: delete_directory ------------------------------------------------
+    # Removes the given path by destroying the dataset
+    # Only possible if no transactions are currently open
+    def delete_directory(self,uuid,path):
+        if uuid not in self._users: raise ex.UserNotFoundException
+        fs_name = self._fm.get_fs(path,is_file=False)
+        self._cm.remove_from_management(fs_name)
+        self._fm.destroy_fs(path)
+        return 0
+
