@@ -21,7 +21,8 @@ class FilesystemManager:
         self._top_level_fs = [] # List of all pools whose mount folder is also a zfs filesystem
         self._filesystems = []  # List of all current zfs filesystems
         self.logger = logging.Logger()
-        # TODO Find all current top level fs and all filesystems
+        # TODO [BUG] All current filesystems are added to top_level_fs, not only the pools 
+        #               (change zfs list -> zpool list and work from there)
         try:
             result = subprocess.run(
                 ["zfs", "list", "-H", "-o", "name,mountpoint"],

@@ -66,6 +66,9 @@ class TransactionManager:
             self.logger.log(f"[TM][INFO] transaction '{tid}' successfully committed")
         except KeyError:
             raise ex.TransactionInvalidException
+        except ex.TransactionInvalidException:
+            self._fm.delete_file_copy(transaction["copy_path"])
+            raise ex.TransactionInvalidException
         finally:
             transaction["status"] = "closed"
             del self._transactions[tid]
