@@ -1,0 +1,23 @@
+# Java-Kompilierte Dateien
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE-speziefische Dateien
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Betriebssystemspeziefische Dateien
+.DS_Store
+Thumbs.db
+
+# Maven- und Gradle-Build-Verzeichnisse
+target/
+out/
+bin/
+build/
