@@ -1,12 +1,16 @@
 package com.fausens.os24u3;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.InterruptedException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
-import java.util.Map;
+
+import com.fausens.os24u3.exceptions.*;
 
 public class TransactionHandler {
     private HashMap<File,String> fileTransactionMap;
@@ -14,47 +18,213 @@ public class TransactionHandler {
     private final String ADDRESS = "http://127.0.0.1:5000";
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
-    public TransactionHandler() {
-        UUID = "Temp";
+    private TransactionHandler() throws Exception {
+        UUID = register();
+        if (UUID == null) throw new Exception();
         fileTransactionMap = new HashMap<>();
-        // 
     }
 
-    public File openFile(String path) {
-        File file = null;
-        
-        return file;
+    public static TransactionHandler newTransactionHandler() {
+        try {
+            return new TransactionHandler();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
-    public void commitFile(File file) {}
+    public void close() {
+        deregister();
+    }
+// ============================================================================
+// Filemanagement Methods
+// ============================================================================
+    private String register() {
+        String uuid = null;
+        try {
+            uuid = sendGetRequest("/register").get("uuid");
+        } catch (Exception e) {}
+        return uuid;
+    }
+    private void deregister() {
+        String requestString = JsonParser.getJsonString("uuid",UUID);
+        try {
+            // Response content doesn't really matter, either the uuid is there and can be deleted
+            // or the problem is beyond this program's capabilities anyway.
+            sendPostRequest("/deregister", requestString); 
+        } catch (Exception e) {}
+    }
 
-    public void cancelFile(File file) {}
+    public File openFile(String path) throws IOException, FileNotFoundException, PathNotManagedException, Exception {
+        String request = JsonParser.getJsonString("uuid",UUID,"path",path);
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/open_file",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200":
+                String tid = responseMap.get("tid");
+                String filepath = responseMap.get("copy_path");
+                File file = new File(URI.create(filepath));
+                fileTransactionMap.put(file,tid);
+                return file;
+            case "500": throw new Exception();
+            case "403": throw new FileNotFoundException();
+            case "407": throw new PathNotManagedException("Path not managed");
+            default: throw new Exception();
+        }
+    }
 
-    public void createFile(String path) {}
+    public boolean commitFile(File file) throws IOException, TransactionInvalidException, Exception{
+        String request = JsonParser.getJsonString("tid",fileTransactionMap.get(file));
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/commit_file",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200": 
+                fileTransactionMap.remove(file);
+                return true;
+            case "500": throw new Exception();
+            case "402": throw new TransactionInvalidException("Transaction is either invalid or has never existed");
+            default: throw new Exception();
+        }
+    }
 
-    public void deleteFile(String path) {}
+    public boolean cancelFile(File file) throws IOException, Exception {
+        String request = JsonParser.getJsonString("tid",fileTransactionMap.get(file));
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/close_file",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200":
+                fileTransactionMap.remove(file);
+                return true;
+            case "500": throw new Exception();
+            default: throw new Exception();
+        }
+    }
 
-    public void createPath(String path) {}
+    public boolean createFile(String path) 
+        throws IOException, 
+            PathNotManagedException, 
+            PathNotFoundException,
+            FileNotFoundException,
+            Exception 
+    {
+        String request = JsonParser.getJsonString("uuid",UUID,"path",path);
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/make_file",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200": return true;
+            case "500": throw new Exception();
+            case "403": throw new FileNotFoundException();
+            case "405": throw new PathNotFoundException("Provided path does not exist");
+            case "407": throw new PathNotManagedException("Path not managed");
+            default: throw new Exception();
+        }
+    }
 
-    public void deletePath(String path) {}
+    public boolean deleteFile(String path) 
+        throws IOException,
+            PathNotManagedException,
+            FileNotFoundException,
+            Exception
+    {
+        String request = JsonParser.getJsonString("uuid",UUID,"path",path);
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/delete_file",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200": return true;
+            case "500": throw new Exception();
+            case "403": throw new FileNotFoundException();
+            case "407": throw new PathNotManagedException("Path not managed");
+            default: throw new Exception();
+        }
+    }
+
+    public boolean createDirectory(String path)
+        throws IOException, 
+            PathNotManagedException,
+            PathExistsException,
+            Exception 
+    {
+        String request = JsonParser.getJsonString("uuid",UUID,"path",path);
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/make_directory",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200": return true;
+            case "500": throw new Exception();
+            case "406": throw new PathExistsException("Prived path already exists");
+            case "407": throw new PathNotManagedException("Path not managed");
+            default: throw new Exception();
+        }
+    }
+
+    public boolean deleteDirectory(String path)
+        throws IOException, 
+            PathNotManagedException, 
+            DirectoryInUseException,
+            Exception 
+    {
+        String request = JsonParser.getJsonString("uuid",UUID,"path",path);
+        HashMap<String,String> responseMap;
+        try {
+            responseMap = sendPostRequest("/delete_directory",request);
+        } catch (InterruptedException e) { throw new IOException();}
+        String code = responseMap.get("code");
+        switch (code) {
+            case "200": return true;
+            case "500": throw new Exception();
+            case "407": throw new PathNotManagedException("Path not managed");
+            case "408": throw new DirectoryInUseException("Provided directory has open transactions");
+            default: throw new Exception();
+        }
+    }
 
     @Override
     protected void finalize() throws Throwable {
-        // Degergister logic on Object destruction
+        // More of a small band-aid on a flesh wound, but as long as the JVM isn't closed before
+        // the gc can get here it should be fine.
+        // If not, the transaction handler will have some abandoned uuids floating around until
+        // restart. "Should be fine"
+        deregister();
     }
 
 // ==================================================================
 // API Interaction
 // ==================================================================
-    private String sendGetRequest(String target) throws Exception {
+    /** Method: sendGetRequest
+     * @param target : Target resource sub-address. Resolves to {ADDRESS}{target}.
+     * @return responseMap : content of response json as HashMap.
+     */
+    private HashMap<String,String> sendGetRequest(String target) throws IOException,InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(ADDRESS+target))
             .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         String responseBody = response.body();
-        return responseBody;
+        HashMap<String,String> responseMap = JsonParser.parseJsonString(responseBody);
+        return responseMap;
     }
-    private String sendPostRequest(String target, String jsonPayloadString) throws Exception{
+    /** Method: sendPostRequest
+     * @param target : Target resource sub-address. Resolves to {ADDRESS}{target}.
+     * @param jsonPayloadString : String containing the request payload as json.
+     * @return responseMap : content of response json as HashMap.
+     */
+    private HashMap<String,String> sendPostRequest(String target, String jsonPayloadString) throws IOException,InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(ADDRESS+target))
             .header("Content-Type", "application/json")
@@ -62,66 +232,7 @@ public class TransactionHandler {
             .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         String responseBody = response.body();
-        return responseBody;
-    }
-
-    private HashMap<String,String> parseJsonString(String jsonString) {
-        jsonString = jsonString.trim();
-        if (jsonString.startsWith("{") && jsonString.endsWith("}")) {
-            jsonString = jsonString.substring(1,jsonString.length()-1);
-        }
-        HashMap<String,String> map = new HashMap<>();
-        String[] pairs = jsonString.split(",");
-        for (String pair : pairs) {
-            pair = pair.trim();
-            String[] keyValue = pair.split(":");
-            String key = keyValue[0];
-            String value = keyValue[1];
-            map.put(key,value);
-        }
-        return map;
-    }
-    private String mapToJsonString(HashMap<String,String> map) {
-        StringBuilder jsonStringBuilder = new StringBuilder();
-        jsonStringBuilder.append("{");
-        for (Map.Entry<String,String> entry : map.entrySet()) {
-            jsonStringBuilder.append("\"").append(entry.getKey()).append("\":");
-            jsonStringBuilder.append("\"").append(entry.getValue()).append("\",");
-        }
-        int length = jsonStringBuilder.length();
-        if (length > 2) jsonStringBuilder.setLength(length-2);
-        jsonStringBuilder.append("}");
-        return jsonStringBuilder.toString();
-    }
-
-    private String registerRequest() throws Exception {
-        String response = sendGetRequest("/register");
-        Map<String,String> jsonMap = parseJsonString(response);
-        String uuid = jsonMap.get("uuid");
-        return uuid;
-    }
-    private void deregisterRequest(String uuid) throws Exception {
-        try {
-            String requestString = "{\"uuid\":\""+uuid+"\"}";
-            sendPostRequest("/deregister", requestString);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void openFileRequest() {}
-    private void commitFileRequest() {}
-    private void cancelFileRequest() {}
-    private void createFileRequest() {}
-    private void deleteFileRequest() {}
-
-    private void createPathRequest() {}
-    private void removePathRequest() {}
-
-// ==================================================================
-// Class: Transaction
-// ==================================================================
-    private class Transaction {
-
+        HashMap<String,String> responseMap = JsonParser.parseJsonString(responseBody);
+        return responseMap;
     }
 }

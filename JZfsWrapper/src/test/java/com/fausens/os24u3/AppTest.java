@@ -1,5 +1,7 @@
 package com.fausens.os24u3;
 
+import java.util.HashMap;
+
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -28,11 +30,23 @@ public class AppTest
         return new TestSuite( AppTest.class );
     }
 
-    /**
-     * Rigourous Test :-)
-     */
-    public void testApp()
-    {
-        assertTrue( true );
+    public void testJsonStringToMap() {
+        String json = "{\"key1\":\"value1\",\"key2\":\"value2\"}";
+        HashMap<String,String> jsonMap = new HashMap<>();
+        jsonMap.put("key1","value1");
+        jsonMap.put("key2","value2");
+        HashMap<String,String> newMap = JsonParser.parseJsonString(json);
+        boolean equal = newMap.equals(jsonMap);
+        assertTrue(equal);
+    }
+
+    public void testJsonMapToString() {
+        String json = "{\"key1\":\"value1\",\"key2\":\"value2\"}";
+        HashMap<String,String> jsonMap = new HashMap<>();
+        jsonMap.put("key1","value1");
+        jsonMap.put("key2","value2");
+        String newString = JsonParser.mapToJsonString(jsonMap);
+        boolean equal = newString.equals(json);
+        assertTrue(equal);
     }
 }

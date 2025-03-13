@@ -27,7 +27,8 @@ class TransactionManager:
         self.logger.log(f'[TM][INFO] registered new user as \'{uuid}\'')
         return uuid
     def deregister_user(self,uuid):
-        del self._users[uuid] # Raises KeyError
+        if uuid not in self._users: raise ex.UserError
+        del self._users[uuid]
         self.logger.log(f'[TM][INFO] deregistered user \'{uuid}\'')
         return 0
 # =============================================================================
@@ -37,7 +38,7 @@ class TransactionManager:
     def open_file(self,uuid,origin_path):
         if not os.path.exists(origin_path): raise FileNotFoundError
         if not os.path.isfile(origin_path): raise ex.NotAFileException
-        if uuid not in self._users: raise ex.UserNotFoundException
+        if uuid not in self._users: raise ex.UserError
         # Generate TID
         utn = next(self._users[uuid]["utn_counter"])
         tid = f'{uuid}_{utn}'
@@ -84,7 +85,7 @@ class TransactionManager:
     
     # File creations can never cause conflicts only be affected by them
     def create_file(self,uuid,path):
-        if uuid not in self._users: raise ex.UserNotFoundException
+        if uuid not in self._users: raise ex.UserError
         self._fm.create_file(path)
         return 0
 
@@ -92,7 +93,7 @@ class TransactionManager:
     def delete_file(self,uuid,path):
         if not os.path.exists(path): raise FileNotFoundError
         if not os.path.isfile(path): raise ex.NotAFileException
-        if uuid not in self._users: raise ex.UserNotFoundException
+        if uuid not in self._users: raise ex.UserError
         # Generate TID
         utn = next(self._users[uuid]["utn_counter"])
         tid = f'{uuid}_{utn}'
@@ -114,7 +115,7 @@ class TransactionManager:
     # Method: create_directory ------------------------------------------------
     # Creates a directory by creating a filesystem
     def create_directory(self,uuid,path):
-        if uuid not in self._users: raise ex.UserNotFoundException
+        if uuid not in self._users: raise ex.UserError
         try:
             self._fm.make_fs(path)
         except ex.FilesystemExistsException:
@@ -124,7 +125,7 @@ class TransactionManager:
     # Removes the given path by destroying the dataset
     # Only possible if no transactions are currently open
     def delete_directory(self,uuid,path):
-        if uuid not in self._users: raise ex.UserNotFoundException
+        if uuid not in self._users: raise ex.UserError
         fs_name = self._fm.get_fs(path,is_file=False)
         self._cm.remove_from_management(fs_name)
         self._fm.destroy_fs(path)

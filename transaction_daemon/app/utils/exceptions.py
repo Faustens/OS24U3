@@ -16,3 +16,5 @@ class FilesystemExistsException(Exception):
     pass
 class FilesystemInUseException(Exception):
     pass
+class UserError(Exception):
+    pass

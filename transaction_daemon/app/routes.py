@@ -18,11 +18,15 @@ def register():
 def deregister():
     data = request.json
     try:
+        uuid = data["uuid"]
         _tm.deregister_user(data["uuid"])
         return jsonify({"answer":"success"}), 200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code": "400"}), 400
-    pass
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code": "400"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code": "401"}), 400
+    except Exception:
+        return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
 @api_bp.route("/open_file", methods=["POST"])
 def open_file():
@@ -33,13 +37,15 @@ def open_file():
         tid, copy_path = _tm.open_file(uuid, path)
         return jsonify({"tid": tid, "copy_path": copy_path}), 200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code":"401"}), 400
     except FileNotFoundError:
-        return jsonify({ "error": "Invalid Request", "message": "Path does not exist"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "File does not exist", "code":"403"}), 400
     except ex.NotAFileException:
-        return jsonify({ "error": "Invalid Request", "message": "Path is not a file"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Path is not a file", "code":"403"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Mountpoint is not managed by zfs", "code":"407"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
@@ -51,9 +57,9 @@ def commit_file():
         _tm.commit_file(tid)
         return jsonify({"answer":"success"}), 200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TransactionInvalidException:
-        return jsonify({ "error": "Invalid Transaction", "message": "Transaction has been invalidated or never existed"}), 404
+        return jsonify({ "error": "Invalid Transaction", "message": "Transaction has been invalidated or never existed", "code":"402"}), 404
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
     
@@ -65,11 +71,7 @@ def close_file():
         _tm.close_file(tid)
         return jsonify({"answer":"success"}),200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
-    except ex.TopLevelFsNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
@@ -82,11 +84,15 @@ def make_file():
         _tm.create_file(uuid,path)
         return jsonify({"answer":"success"}),200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TopLevelFsNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Mountpoint is not managed by zfs", "code":"407"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code":"401"}), 400
+    except ex.NotAFileException:
+        return jsonify({ "error": "Invalid Request", "message": "Provided path is not a File", "code":"403"}), 400
+    except ex.FilesystemNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not found", "code":"405"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
@@ -99,13 +105,15 @@ def delete_file():
         _tm.delete_file(uuid,path)
         return jsonify({"answer":"success"}),200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code":"401"}), 400
     except FileNotFoundError:
-        return jsonify({ "error": "Invalid Request", "message": "File not found"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "File does not exist", "code":"403"}), 400
     except ex.NotAFileException:
-        return jsonify({ "error": "Invalid Request", "message": "Path is not a file"}), 400   
+        return jsonify({ "error": "Invalid Request", "message": "Path is not a file", "code":"403"}), 400
+    except ex.TopLevelFsNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Mountpoint is not managed by zfs", "code":"407"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
@@ -118,11 +126,13 @@ def make_directory():
         _tm.create_directory(uuid,path)
         return jsonify({"answer":"success"}),200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TopLevelFsNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Mountpoint is not managed by zfs", "code":"407"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code":"401"}), 400
+    except ex.FilesystemExistsException:
+        return jsonify({ "error": "Invalid Request", "message": "Path already exists", "code":"406"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
@@ -135,10 +145,14 @@ def delete_directory():
         _tm.delete_directory(uuid,path)
         return jsonify({"answer":"success"}),200
     except KeyError:
-        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
+    except ex.UserError:
+        return jsonify({ "error": "Invalid Request", "message": "UUID not in users", "code":"401"}), 400
+    except ex.FilesystemNotFoundException:
+        return jsonify({ "error": "Invalid Request", "message": "Path not managed", "code":"407"}), 400
     except ex.TopLevelFsNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "Path not part of a valid pool"}), 400
-    except ex.UserNotFoundException:
-        return jsonify({ "error": "Invalid Request", "message": "UUID not in users"}), 400
+        return jsonify({ "error": "Invalid Request", "message": "Mountpoint is not managed by zfs", "code":"407"}), 400
+    except ex.FilesystemInUseException:
+        return jsonify({ "error": "Invalid Request", "message": "Filesystem has open transactions", "code":"408"}), 400
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
