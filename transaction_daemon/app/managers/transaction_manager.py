@@ -27,6 +27,7 @@ class TransactionManager:
         self.logger.log(f'[TM][INFO] registered new user as \'{uuid}\'')
         return uuid
     def deregister_user(self,uuid):
+        print(f"'{uuid}'")
         if uuid not in self._users: raise ex.UserError
         del self._users[uuid]
         self.logger.log(f'[TM][INFO] deregistered user \'{uuid}\'')

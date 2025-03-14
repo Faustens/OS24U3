@@ -1,4 +1,4 @@
-package com.fausens.os24u3;
+package com.faustens.os24u3;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,7 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 
-import com.fausens.os24u3.exceptions.*;
+import com.faustens.os24u3.exceptions.*;
 
 public class TransactionHandler {
     private HashMap<File,String> fileTransactionMap;
@@ -50,6 +50,7 @@ public class TransactionHandler {
         try {
             // Response content doesn't really matter, either the uuid is there and can be deleted
             // or the problem is beyond this program's capabilities anyway.
+            // Except when this programm randomly adds an empty character at the beginning of the uuid...
             sendPostRequest("/deregister", requestString); 
         } catch (Exception e) {}
     }
@@ -64,8 +65,9 @@ public class TransactionHandler {
         switch (code) {
             case "200":
                 String tid = responseMap.get("tid");
+                System.out.println(tid);
                 String filepath = responseMap.get("copy_path");
-                File file = new File(URI.create(filepath));
+                File file = new File(filepath);
                 fileTransactionMap.put(file,tid);
                 return file;
             case "500": throw new Exception();
@@ -94,6 +96,7 @@ public class TransactionHandler {
 
     public boolean cancelFile(File file) throws IOException, Exception {
         String request = JsonParser.getJsonString("tid",fileTransactionMap.get(file));
+        System.out.println(request);
         HashMap<String,String> responseMap;
         try {
             responseMap = sendPostRequest("/close_file",request);
@@ -197,7 +200,7 @@ public class TransactionHandler {
     @Override
     protected void finalize() throws Throwable {
         // More of a small band-aid on a flesh wound, but as long as the JVM isn't closed before
-        // the gc can get here it should be fine.
+        // the gc can get here it should be fine  (Tests indicate it won't though).
         // If not, the transaction handler will have some abandoned uuids floating around until
         // restart. "Should be fine"
         deregister();

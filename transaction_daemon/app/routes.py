@@ -12,15 +12,15 @@ def status():
 @api_bp.route("/register", methods=["GET"])
 def register():
     uuid = _tm.regiser_user()
-    return jsonify({"uuid": uuid}), 200
+    return jsonify({"uuid":uuid,"code":"200"}), 200
 
-@api_bp.route("/deregister", methods=["DELETE"])
+@api_bp.route("/deregister", methods=["POST"])
 def deregister():
     data = request.json
     try:
-        uuid = data["uuid"]
-        _tm.deregister_user(data["uuid"])
-        return jsonify({"answer":"success"}), 200
+        uuid = data["uuid"].strip()
+        _tm.deregister_user(uuid)
+        return jsonify({"answer":"success","code":"200"}), 200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code": "400"}), 400
     except ex.UserError:
@@ -32,10 +32,10 @@ def deregister():
 def open_file():
     data = request.json
     try:
-        uuid = data["uuid"]
-        path = data["path"]
+        uuid = data["uuid"].strip()
+        path = data["path"].strip()
         tid, copy_path = _tm.open_file(uuid, path)
-        return jsonify({"tid": tid, "copy_path": copy_path}), 200
+        return jsonify({"tid": tid, "copy_path": copy_path,"code":"200"}), 200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.UserError:
@@ -53,9 +53,9 @@ def open_file():
 def commit_file():
     data = request.json
     try:
-        tid = data["tid"]
+        tid = data["tid"].strip()
         _tm.commit_file(tid)
-        return jsonify({"answer":"success"}), 200
+        return jsonify({"answer":"success","code":"200"}), 200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TransactionInvalidException:
@@ -63,13 +63,13 @@ def commit_file():
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
     
-@api_bp.route("/close_file", methods=["DELETE"])
+@api_bp.route("/close_file", methods=["POST"])
 def close_file():
     data = request.json
     try:
-        tid = data["tid"]
+        tid = data["tid"].strip()
         _tm.close_file(tid)
-        return jsonify({"answer":"success"}),200
+        return jsonify({"answer":"success","code":"200"}),200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except Exception as e:
@@ -79,10 +79,10 @@ def close_file():
 def make_file():
     data = request.json
     try:
-        uuid = data["uuid"]
-        path = data["path"]
+        uuid = data["uuid"].strip()
+        path = data["path"].strip()
         _tm.create_file(uuid,path)
-        return jsonify({"answer":"success"}),200
+        return jsonify({"answer":"success","code":"200"}),200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TopLevelFsNotFoundException:
@@ -100,10 +100,10 @@ def make_file():
 def delete_file():
     data = request.json
     try:
-        uuid = data["uuid"]
-        path = data["path"]
+        uuid = data["uuid"].strip()
+        path = data["path"].strip()
         _tm.delete_file(uuid,path)
-        return jsonify({"answer":"success"}),200
+        return jsonify({"answer":"success","code":"200"}),200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.UserError:
@@ -121,10 +121,10 @@ def delete_file():
 def make_directory():
     data = request.json
     try:
-        uuid = data["uuid"]
-        path = data["path"]
+        uuid = data["uuid"].strip()
+        path = data["path"].strip()
         _tm.create_directory(uuid,path)
-        return jsonify({"answer":"success"}),200
+        return jsonify({"answer":"success","code":"200"}),200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.TopLevelFsNotFoundException:
@@ -136,14 +136,14 @@ def make_directory():
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "message": str(e)}), 500
 
-@api_bp.route("/delete_directory", methods=["DELETE"])
+@api_bp.route("/delete_directory", methods=["POST"])
 def delete_directory():
     data = request.json
     try:
-        uuid = data["uuid"]
-        path = data["path"]
+        uuid = data["uuid"].strip()
+        path = data["path"].strip()
         _tm.delete_directory(uuid,path)
-        return jsonify({"answer":"success"}),200
+        return jsonify({"answer":"success","code":"200"}),200
     except KeyError:
         return jsonify({ "error": "Invalid Request", "message": "Missing values in JSON", "code":"400"}), 400
     except ex.UserError:

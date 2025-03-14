@@ -1,12 +1,10 @@
-package com.fausens.os24u3;
+package com.faustens.os24u3;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class JsonParser {
-    public JsonParser() {
-
-    }
+    public JsonParser() {}
 
     public static HashMap<String,String> parseJsonString(String jsonString) {
         jsonString = jsonString.trim();
@@ -18,8 +16,8 @@ public class JsonParser {
         for (String pair : pairs) {
             pair = pair.trim();
             String[] keyValue = pair.split(":");
-            String key = keyValue[0].replace("\"","");
-            String value = keyValue[1].replace("\"","");
+            String key = keyValue[0].replace("\"","").trim();
+            String value = keyValue[1].replace("\"","").trim();
             map.put(key,value);
         }
         return map;
