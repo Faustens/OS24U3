@@ -17,7 +17,7 @@ class FilesystemManager:
     def __init__(self):
         if hasattr(self,"_initialized") and self._initialized: return
         self._initialized = True
-        self._instance = None
+        self._instance = None # not needed anymore
         self._top_level_fs = [] # List of all pools whose mount folder is also a zfs filesystem
         self._filesystems = []  # List of all current zfs filesystems
         self.logger = logging.Logger()
